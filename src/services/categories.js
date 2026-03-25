@@ -1,13 +1,13 @@
 import api from './api';
 
-export const getCategories = async (type = null) => {
-  const params = type ? { type } : {};
+export const getCategories = async (categoryType = null) => {
+  const params = categoryType ? { category_type: categoryType } : {};
   const response = await api.get('/api/categories', { params });
   return response.data;
 };
 
-export const createCategory = async (name, type) => {
-  const response = await api.post('/api/categories', { name, type });
+export const createCategory = async (name, categoryType) => {
+  const response = await api.post('/api/categories', { name, category_type: categoryType });
   return response.data;
 };
 
