@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Categories from './pages/Categories';
 
 // Компонент для защищённых маршрутов
 const PrivateRoute = ({ children }) => {
@@ -28,6 +29,14 @@ function App() {
             }
           />
           <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route
+            path="/categories"
+            element={
+              <PrivateRoute>
+                <Categories />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
