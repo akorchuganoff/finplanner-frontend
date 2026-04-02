@@ -1,9 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { getAggregated, getBalanceTimeline } from '../services/dashboard'; // добавлен getBalanceTimeline
-import { useAuth } from '../context/AuthContext';
 import {
-    PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Legend // добавлены элементы для графика
+    Box,
+    Flex,
+    Heading,
+    Text,
+    Select,
+    Card,
+    CardHeader,
+    CardBody,
+    Button,
+    Spinner,
+    useColorModeValue,
+    SimpleGrid,
+} from '@chakra-ui/react';
+import { useAuth } from '../context/AuthContext';
+import { getAggregated, getBalanceTimeline } from '../services/dashboard';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip,
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Legend,
 } from 'recharts';
 
 const Dashboard = () => {
@@ -12,12 +35,10 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [months, setMonths] = useState(1);
 
-    // Состояния для графика
     const [timelineData, setTimelineData] = useState([]);
     const [timelineGroupBy, setTimelineGroupBy] = useState('day');
     const [timelineLoading, setTimelineLoading] = useState(false);
 
-    // Загрузка агрегированных данных (для круговых диаграмм)
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -32,7 +53,6 @@ const Dashboard = () => {
         fetchData();
     }, [months]);
 
-    // Загрузка данных для линейного графика
     useEffect(() => {
         const fetchTimeline = async () => {
             setTimelineLoading(true);
@@ -48,150 +68,244 @@ const Dashboard = () => {
         fetchTimeline();
     }, [timelineGroupBy]);
 
-    if (loading) return <div>Загрузка...</div>;
-    if (!data) return <div>Ошибка загрузки данных</div>;
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#F39C12', '#2ECC71'];
 
-    // Подготовка данных для круговых диаграмм (без изменений)
-    const pieDataIncome = (data.period_breakdown?.income || []).map(item => ({
+    const pieDataIncome = (data?.period_breakdown?.income || []).map(item => ({
         name: item.category_name,
-        value: Number(item.amount)
+        value: Number(item.amount),
     }));
-    const pieDataExpense = (data.period_breakdown?.expense || []).map(item => ({
+    const pieDataExpense = (data?.period_breakdown?.expense || []).map(item => ({
         name: item.category_name,
-        value: Number(item.amount)
+        value: Number(item.amount),
     }));
 
-    // Вычисляем накопленный баланс для графика
     const cumulativeData = timelineData.reduce((acc, curr, index) => {
         const prevBalance = index > 0 ? acc[index - 1].cumulativeBalance : 0;
         acc.push({
             ...curr,
-            cumulativeBalance: prevBalance + curr.balance
+            cumulativeBalance: prevBalance + curr.balance,
         });
         return acc;
     }, []);
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#F39C12', '#2ECC71'];
+    const chartTextColor = useColorModeValue('#1A202C', '#F7FAFC');
+    const chartGridColor = useColorModeValue('#E2E8F0', '#2D3748');
+    const chartTooltipBg = useColorModeValue('white', '#1A202C');
+    const chartTooltipBorder = useColorModeValue('#CBD5E0', '#4A5568');
+    const chartLineColor = '#8884d8';
+
+    if (loading) {
+        return (
+            <Flex justify="center" align="center" minH="50vh">
+                <Spinner size="xl" />
+            </Flex>
+        );
+    }
+
+    if (!data) {
+        return (
+            <Box textAlign="center" py={10}>
+                <Text color="red.500">Ошибка загрузки данных</Text>
+            </Box>
+        );
+    }
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>Дашборд</h1>
-            <p>Добро пожаловать, {user?.email}!</p>
-            <button onClick={logout}>Выйти</button>
+        <Box>
+            <Flex justify="space-between" align="center" wrap="wrap" gap={4} mb={6}>
+                <Box>
+                    <Heading as="h1" size="lg">
+                        Дашборд
+                    </Heading>
+                    <Text color="gray.500" mt={1}>
+                        Добро пожаловать, {user?.email}!
+                    </Text>
+                </Box>
+                <Button onClick={logout} colorScheme="red" variant="outline" size="sm">
+                    Выйти
+                </Button>
+            </Flex>
 
-            {/* Селектор месяцев для круговых диаграмм (был) */}
-            <div style={{ marginTop: '20px' }}>
-                <label>Период: </label>
-                <select value={months} onChange={(e) => setMonths(parseInt(e.target.value))}>
+            <Flex align="center" gap={4} mb={6}>
+                <Text fontWeight="medium">Период:</Text>
+                <Select
+                    value={months}
+                    onChange={(e) => setMonths(parseInt(e.target.value))}
+                    width="auto"
+                    size="md"
+                >
                     <option value={1}>Последний месяц</option>
                     <option value={3}>Последние 3 месяца</option>
                     <option value={6}>Последние 6 месяцев</option>
                     <option value={12}>Последние 12 месяцев</option>
-                </select>
-            </div>
+                </Select>
+            </Flex>
 
-            {/* Карточки баланса (без изменений) */}
-            <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-                <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', flex: 1 }}>
-                    <h3>Общий баланс</h3>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                        {Number(data.balance).toFixed(2)} ₽
-                    </p>
-                </div>
-                <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', flex: 1 }}>
-                    <h3>Баланс за период</h3>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                        {Number(data.period_balance).toFixed(2)} ₽
-                    </p>
-                    <small>
-                        {data.period_start} – {data.period_end}
-                    </small>
-                </div>
-            </div>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={8}>
+                <Card variant="outline">
+                    <CardHeader pb={0}>
+                        <Heading size="md">Общий баланс</Heading>
+                    </CardHeader>
+                    <CardBody>
+                        <Text fontSize="3xl" fontWeight="bold" color="green.500">
+                            {Number(data.balance).toFixed(2)} ₽
+                        </Text>
+                    </CardBody>
+                </Card>
+                <Card variant="outline">
+                    <CardHeader pb={0}>
+                        <Heading size="md">Баланс за период</Heading>
+                    </CardHeader>
+                    <CardBody>
+                        <Text fontSize="3xl" fontWeight="bold">
+                            {Number(data.period_balance).toFixed(2)} ₽
+                        </Text>
+                        <Text fontSize="sm" color="gray.500">
+                            {data.period_start} – {data.period_end}
+                        </Text>
+                    </CardBody>
+                </Card>
+            </SimpleGrid>
 
-            {/* НОВЫЙ БЛОК: График изменения баланса */}
-            <div style={{ marginTop: '40px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2>Динамика баланса</h2>
-                    <select value={timelineGroupBy} onChange={(e) => setTimelineGroupBy(e.target.value)}>
+            <Box mb={10}>
+                <Flex justify="space-between" align="center" wrap="wrap" gap={4} mb={4}>
+                    <Heading as="h2" size="md">
+                        Динамика баланса
+                    </Heading>
+                    <Select
+                        value={timelineGroupBy}
+                        onChange={(e) => setTimelineGroupBy(e.target.value)}
+                        width="auto"
+                        size="sm"
+                    >
                         <option value="day">По дням</option>
                         <option value="month">По месяцам</option>
                         <option value="quarter">По кварталам</option>
-                    </select>
-                </div>
+                    </Select>
+                </Flex>
                 {timelineLoading ? (
-                    <p>Загрузка графика...</p>
+                    <Flex justify="center" py={10}>
+                        <Spinner />
+                    </Flex>
                 ) : cumulativeData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={400}>
-                        <LineChart data={cumulativeData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="period" tickFormatter={(tick) => new Date(tick).toLocaleDateString()} />
-                            <YAxis />
-                            <Tooltip formatter={(value) => `${value.toFixed(2)} ₽`} />
-                            <Legend />
-                            <Line type="monotone" dataKey="cumulativeBalance" name="Накопленный баланс" stroke="#8884d8" />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <Box h="400px" w="100%">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={cumulativeData}>
+                                <CartesianGrid stroke={chartGridColor} strokeDasharray="3 3" />
+                                <XAxis
+                                    dataKey="period"
+                                    tickFormatter={(tick) => new Date(tick).toLocaleDateString()}
+                                    stroke={chartTextColor}
+                                />
+                                <YAxis stroke={chartTextColor} />
+                                <Tooltip
+                                    formatter={(value) => `${value.toFixed(2)} ₽`}
+                                    contentStyle={{
+                                        backgroundColor: chartTooltipBg,
+                                        borderColor: chartTooltipBorder,
+                                        borderRadius: '8px',
+                                    }}
+                                />
+                                <Legend wrapperStyle={{ color: chartTextColor }} />
+                                <Line
+                                    type="monotone"
+                                    dataKey="cumulativeBalance"
+                                    name="Накопленный баланс"
+                                    stroke={chartLineColor}
+                                    strokeWidth={2}
+                                    dot={{ r: 4 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </Box>
                 ) : (
-                    <p>Нет данных для построения графика</p>
+                    <Text textAlign="center" py={10} color="gray.500">
+                        Нет данных для построения графика
+                    </Text>
                 )}
-            </div>
+            </Box>
 
-            {/* Круговые диаграммы (без изменений) */}
-            <div style={{ marginTop: '40px' }}>
-                <h2>Структура доходов за период</h2>
-                {pieDataIncome.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={pieDataIncome}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {pieDataIncome.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <p>Нет данных о доходах за выбранный период</p>
-                )}
-            </div>
+            {/* Две круговые диаграммы в ряд на десктопе, колонкой на мобильных */}
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8} mb={10}>
+                <Box>
+                    <Heading as="h2" size="md" mb={4} textAlign="center">
+                        Структура доходов за период
+                    </Heading>
+                    {pieDataIncome.length > 0 ? (
+                        <Box h="300px" w="100%">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieDataIncome}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {pieDataIncome.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: chartTooltipBg,
+                                            borderColor: chartTooltipBorder,
+                                            borderRadius: '8px',
+                                        }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </Box>
+                    ) : (
+                        <Text textAlign="center" py={6} color="gray.500">
+                            Нет данных о доходах за выбранный период
+                        </Text>
+                    )}
+                </Box>
 
-            <div style={{ marginTop: '40px' }}>
-                <h2>Структура расходов за период</h2>
-                {pieDataExpense.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={pieDataExpense}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {pieDataExpense.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <p>Нет данных о расходах за выбранный период</p>
-                )}
-            </div>
-        </div>
+                <Box>
+                    <Heading as="h2" size="md" mb={4} textAlign="center">
+                        Структура расходов за период
+                    </Heading>
+                    {pieDataExpense.length > 0 ? (
+                        <Box h="300px" w="100%">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieDataExpense}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {pieDataExpense.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: chartTooltipBg,
+                                            borderColor: chartTooltipBorder,
+                                            borderRadius: '8px',
+                                        }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </Box>
+                    ) : (
+                        <Text textAlign="center" py={6} color="gray.500">
+                            Нет данных о расходах за выбранный период
+                        </Text>
+                    )}
+                </Box>
+            </SimpleGrid>
+        </Box>
     );
 };
 
