@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Categories from './pages/Categories';
 import Transactions from './pages/Transactions';
 import CashFlow from './pages/CashFlow';
+import Import from './pages/Import';
 import { Button, Flex, Box, Container, Heading, Spacer } from '@chakra-ui/react';
 import { useColorMode } from '@chakra-ui/react';
 
@@ -39,6 +40,9 @@ function Navbar() {
             </Button>
             <Button as={Link} to="/cash-flow" variant="ghost" size="sm">
               Отчёт ДДС
+            </Button>
+            <Button as={Link} to="/import" variant="ghost" size="sm">
+              Внести данные из выписки
             </Button>
           </Flex>
 
@@ -108,6 +112,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <CashFlow />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/import"
+              element={
+                <PrivateRoute>
+                  <Import />
                 </PrivateRoute>
               }
             />
