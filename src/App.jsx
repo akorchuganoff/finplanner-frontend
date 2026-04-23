@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ChatWidget from './components/ChatWidget/ChatWidget';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -126,6 +127,7 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </Container>
+        <ChatWidget />
       </BrowserRouter>
     </AuthProvider>
   );
