@@ -20,7 +20,7 @@ import {
     Badge,
     Tooltip,
 } from '@chakra-ui/react';
-import { AddIcon, RepeatIcon, DeleteIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
+import { AddIcon, RepeatIcon, DeleteIcon, ViewIcon, ViewOffIcon, WarningIcon } from '@chakra-ui/icons';
 import { Virtuoso } from 'react-virtuoso';
 import api from '../services/api';
 import { getCategories } from '../services/categories';
@@ -38,19 +38,23 @@ const TransactionRow = React.memo(({
     bgColorEven,
     hoverBg,
     redBgLight,
-    categories, // передаём весь массив, фильтруем на месте
+    duplicateBgColor,
+    categories,
 }) => {
     const handleCategorySelect = (e) => {
         const value = e.target.value;
         onCategoryChange(tx.tempId, value ? parseInt(value) : null);
     };
 
-    let bg = tx.index % 2 === 0 ? bgColorEven : bgColorOdd;
-    if (highlightNoCategory && !tx.category_id) {
+    let bg;
+    if (tx.is_duplicate) {
+        bg = duplicateBgColor;
+    } else if (highlightNoCategory && !tx.category_id) {
         bg = redBgLight;
+    } else {
+        bg = tx.index % 2 === 0 ? bgColorEven : bgColorOdd;
     }
 
-    // Фильтруем категории по типу транзакции
     const filteredCats = categories.filter(cat => cat.category_type === tx.type);
 
     return (
@@ -71,9 +75,12 @@ const TransactionRow = React.memo(({
                 </Text>
             </Box>
             <Box flex="1" px={2} py={2} draggable onDragStart={(e) => onDragStart(e, tx.description)} cursor="grab">
-                <Text fontSize="sm" noOfLines={1}>
-                    {tx.description}
-                </Text>
+                <HStack>
+                    {tx.is_duplicate && <WarningIcon color="orange.500" />}
+                    <Text fontSize="sm" noOfLines={1}>
+                        {tx.description}
+                    </Text>
+                </HStack>
             </Box>
             <Box flex="0 0 200px" px={2} py={2}>
                 <Select
@@ -117,6 +124,7 @@ const Import = () => {
     const bgColorEven = useColorModeValue('gray.50', 'gray.700');
     const hoverBg = useColorModeValue('gray.100', 'gray.700');
     const redBgLight = useColorModeValue('red.50', 'red.900');
+    const duplicateBgLight = useColorModeValue('yellow.50', 'yellow.900');
 
     // Загрузка категорий при монтировании и при обновлении
     const loadCategories = useCallback(async () => {
@@ -237,6 +245,19 @@ const Import = () => {
         }
     };
 
+    const handleRemoveDuplicates = () => {
+        if (!preview) return;
+        const filtered = preview.filter(tx => !tx.is_duplicate);
+        const removedCount = preview.length - filtered.length;
+        setPreview(filtered);
+        toast({
+            title: 'Дубликаты удалены',
+            description: `Убрано ${removedCount} дублирующихся транзакций`,
+            status: 'info',
+            duration: 3000
+        });
+    };
+
     // Drag & drop
     const onDragStart = useCallback((e, description) => {
         e.dataTransfer.setData('text/plain', description);
@@ -306,8 +327,21 @@ const Import = () => {
                             <Button leftIcon={filterUncategorized ? <ViewOffIcon /> : <ViewIcon />} colorScheme="blue" variant="outline" onClick={toggleFilter} size="sm">
                                 {filterUncategorized ? 'Показать все' : 'Только неразобранные'}
                             </Button>
+                            <Button
+                                leftIcon={<DeleteIcon />}
+                                colorScheme="orange"
+                                variant="outline"
+                                onClick={handleRemoveDuplicates}
+                                size="sm"
+                                isDisabled={!preview?.some(tx => tx.is_duplicate)}
+                            >
+                                Удалить дубликаты
+                            </Button>
                             <Badge colorScheme="red" fontSize="0.9em" px={2} py={1} borderRadius="full">
                                 Неразобрано: {uncategorizedCount}
+                            </Badge>
+                            <Badge colorScheme="yellow" fontSize="0.9em" px={2} py={1} borderRadius="full">
+                                Дублей: {preview?.filter(tx => tx.is_duplicate).length || 0}
                             </Badge>
                             <Divider orientation="vertical" h="30px" display={{ base: 'none', md: 'block' }} />
                             <Flex ref={dropZoneRef} flex={1} direction={{ base: 'column', sm: 'row' }} gap={3} align="center"
@@ -382,6 +416,7 @@ const Import = () => {
                                         bgColorEven={bgColorEven}
                                         hoverBg={hoverBg}
                                         redBgLight={redBgLight}
+                                        duplicateBgColor={duplicateBgLight}
                                         categories={categories}
                                     />
                                 );
